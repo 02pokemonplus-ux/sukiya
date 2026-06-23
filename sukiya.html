@@ -30,13 +30,13 @@
   html[data-theme="dark"] {
     --olive: #C76A52;
     --olive-deep: #A65640;
-    --bg: #221E1B;
-    --card: #2D2823;
-    --card-alt: #38322B;
-    --line: #4A4138;
-    --ink: #F1E6D8;
-    --ink-soft: #C2B5A4;
-    --muted: #8F8275;
+    --bg: #1C1B1A;
+    --card: #262423;
+    --card-alt: #302E2C;
+    --line: #3F3D3A;
+    --ink: #D9D5D0;
+    --ink-soft: #A8A39C;
+    --muted: #7A766F;
     --accent: #C76A52;
     --accent-soft: #4A2E24;
     --on-accent: #F1E6D8;
@@ -295,6 +295,15 @@
   .shuffle-btn:hover { border-color: var(--olive); color: var(--olive); }
 
   /* ====== Reference table view (速査表 style, like image) ====== */
+  .ref-toolbar-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .ref-toolbar-row .section-label { margin-bottom: 0; }
+
   .meat-filter-row {
     display: flex;
     gap: 10px;
@@ -349,6 +358,10 @@
   }
   .ref-cell-kana { font-size: 13px; color: var(--ink-soft); }
   .ref-cell-zh { font-size: 16px; font-weight: 700; color: var(--ink); }
+
+  /* 全顯示模式：卡片不需點擊互動 */
+  .ref-grid.zh-pinned .ref-cell { cursor: default; }
+  .ref-grid.zh-pinned .ref-cell:hover { border-color: var(--line); }
 
   /* ====== Quiz view ====== */
   .quiz-wrap { max-width: 560px; margin: 0 auto; }
@@ -710,7 +723,10 @@
 
     <!-- 查詢子視圖 -->
     <div class="inner-view active" id="ref-lookup">
-      <p class="section-label">點擊單字查看假名與中文意思</p>
+      <div class="ref-toolbar-row">
+        <p class="section-label" id="refLookupHint">點擊單字查看假名與中文意思</p>
+        <button class="phrase-toggle-btn" id="toggleRefZh" data-on="false">全顯示</button>
+      </div>
       <div class="meat-filter-row" id="meatFilterRow" style="display:none;"></div>
       <div class="ref-grid" id="refGrid"></div>
     </div>
@@ -1205,6 +1221,7 @@ function buildCatTabs() {
 
 /* ================= REF (速査表) ================= */
 let currentMeatFilter = "all";
+let refZhPinned = false;
 
 const MEAT_LABELS = {
   all: "全部",
@@ -1243,18 +1260,29 @@ function renderMeatFilter() {
   });
 }
 
+function renderRefCell(cell, item) {
+  if (refZhPinned) {
+    cell.innerHTML = `<span class="ref-cell-kanji">${item.kanji}</span><span class="ref-cell-kana">${item.kana}</span><span class="ref-cell-zh">${item.zh}</span>`;
+  } else {
+    cell.classList.remove('revealed');
+    cell.innerHTML = `<span class="ref-cell-kanji">${item.kanji}</span>`;
+  }
+}
+
 function renderRef(keepFilter) {
   if (!keepFilter) currentMeatFilter = "all";
   renderMeatFilter();
 
   const items = getRefItems();
   const grid = document.getElementById('refGrid');
+  grid.classList.toggle('zh-pinned', refZhPinned);
   grid.innerHTML = '';
   items.forEach((item) => {
     const cell = document.createElement('div');
     cell.className = 'ref-cell';
-    cell.innerHTML = `<span class="ref-cell-kanji">${item.kanji}</span>`;
+    renderRefCell(cell, item);
     cell.addEventListener('click', () => {
+      if (refZhPinned) return;
       const revealed = cell.classList.toggle('revealed');
       cell.innerHTML = revealed
         ? `<span class="ref-cell-kana">${item.kana}</span><span class="ref-cell-zh">${item.zh}</span>`
@@ -1263,6 +1291,16 @@ function renderRef(keepFilter) {
     grid.appendChild(cell);
   });
 }
+
+document.getElementById('toggleRefZh').addEventListener('click', (e) => {
+  const isOn = e.target.dataset.on === 'true';
+  refZhPinned = !isOn;
+  e.target.dataset.on = String(refZhPinned);
+  document.getElementById('refLookupHint').textContent = refZhPinned
+    ? '已顯示全部假名與中文意思'
+    : '點擊單字查看假名與中文意思';
+  renderRef(true);
+});
 
 /* ================= STUDY ================= */
 function initStudy() {
